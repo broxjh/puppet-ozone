@@ -1,6 +1,10 @@
 # Specifically targetting CentOS 5.8 with this class.
 
-class ozone::ozone ( $user = "ozone", $ozone_home = "/opt/ozone", $ozone_https_port = 443, $ozone_http_port = 80){
+class ozone::ozone ( $user = "ozone", 
+		     $ozone_home = "/opt/ozone", 
+		     $ozone_https_port = 443, 
+		     $ozone_http_port = 80,
+		     $ozone_hostname = "localhost"){
 
 
     if !defined(Service["iptables"]) {
@@ -81,6 +85,34 @@ class ozone::ozone ( $user = "ozone", $ozone_home = "/opt/ozone", $ozone_https_p
         group => $user,
         mode => 755,
         content => template("ozone/server.xml.erb"),
+    } ->
+    file { "$ozone_home/tomcat/lib/OzoneConfig.properties":
+        owner => $user,
+        group => $user,
+        mode => 755,
+        content => template("ozone/OzoneConfig.properties.erb"),
+    } ->
+    file { "$ozone_home/tomcat/bin/setenv.sh":
+        owner => $user,
+        group => $user,
+        mode => 755,
+        content => template("ozone/setenv.sh.erb"),
+    } ->
+    file { "$ozone_home/etc/tools/create_certs.sh":
+	owner => $user,
+	group => $group,
+	mode => "755",
+	content => template("ozone/create_certs.sh.erb")
+    } ->
+    exec { "$ozone_home/etc/tools/create_certs.sh":
+	user => "root",
+        cwd => "$ozone_home/etc/tools",
+        creates => "$ozone_home/etc/tools/$ozone_hostname.jks"
+    } ->
+    exec { "cp $ozone_home/etc/tools/$ozone_hostname.jks $ozone_home/tomcat/certs/":
+	user => "root",
+        cwd => "$ozone_home/etc/tools",
+        creates => "$ozone_home/tomcat/certs/$ozone_hostname.jks"
     } ->
     file { "/etc/init.d/ozone":
         owner => 'root',

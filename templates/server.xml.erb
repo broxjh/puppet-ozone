@@ -83,8 +83,8 @@
          described in the APR documentation -->
     <Connector port="<%= @ozone_https_port %>" protocol="HTTP/1.1" SSLEnabled="true"
                maxThreads="150" scheme="https" secure="true"
-               keystoreFile="certs/keystore.jks" keystorePass="changeit"	       
-               truststoreFile="certs/keystore.jks" truststorePass="changeit"	       
+	       keystoreFile="certs/<%= @ozone_hostname %>.jks" keystorePass="changeit"	       
+               truststoreFile="certs/<%= @ozone_hostname %>.jks" truststorePass="changeit"	       
                clientAuth="want" sslProtocol="TLS" />
                
     <!-- For High Performance Configuration, We Recommend These Settings -->
