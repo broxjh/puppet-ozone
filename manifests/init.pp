@@ -4,8 +4,9 @@ class ozone::ozone ( $user = "ozone",
 		     $ozone_home = "/opt/ozone", 
 		     $ozone_https_port = 443, 
 		     $ozone_http_port = 80,
-		     $ozone_hostname = "localhost"){
-
+		     $ozone_hostname = "localhost",
+         $ozone_ca_cert = "",
+         $ozone_ca_key = ""){
 
     if !defined(Service["iptables"]) {
   	  service { "iptables": ensure => false, enable => false }
@@ -32,6 +33,12 @@ class ozone::ozone ( $user = "ozone",
         owner => $user,
         group => $user,
         mode => 775 
+    } ->
+    file { "${ozone_home}/certs":
+        ensure => 'directory',
+        owner => $user,
+        group => $user,
+        mode => 775
     } ->     
     file { "/var/run/ozone/":
         ensure => 'directory',
@@ -40,6 +47,22 @@ class ozone::ozone ( $user = "ozone",
         mode => 775
     } 
     
+    if $ozone_ca_cert == '' {
+      warning('No root CA being used, will self-sign a certificate.')
+    }
+    else
+    {
+      file { "ca_cert":
+        path => "${ozone_home}/certs/${ozone_ca_cert}",
+        source => "puppet:///modules/ozone/${ozone_ca_cert}",
+        require => File["${ozone_home}/certs/"]
+      } 
+      file { "ca_key":
+        path => "${ozone_home}/certs/${ozone_ca_key}",
+        source => "puppet:///modules/ozone/${ozone_ca_key}",
+        require => File["${ozone_home}/certs/"]
+      }
+    }
 
     package{ "unzip": ensure => installed } ->
     package { "java-1.6.0-openjdk-devel": ensure => installed } ->
@@ -99,13 +122,13 @@ class ozone::ozone ( $user = "ozone",
         content => template("ozone/setenv.sh.erb"),
     } ->
     file { "$ozone_home/etc/tools/create_certs.sh":
-	owner => $user,
-	group => $group,
-	mode => "755",
-	content => template("ozone/create_certs.sh.erb")
+	    owner => $user,
+	    group => $group,
+	    mode => "755",
+	    content => template("ozone/create_certs.sh.erb")
     } ->
     exec { "$ozone_home/etc/tools/create_certs.sh":
-	user => "root",
+	    user => "root",
         cwd => "$ozone_home/etc/tools",
         creates => "$ozone_home/etc/tools/$ozone_hostname.jks"
     } ->

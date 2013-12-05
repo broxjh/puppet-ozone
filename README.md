@@ -14,6 +14,10 @@ Just add the following to your Puppet manifest:
 
 If you want to get a basic Ozone server running in a virtual machine, well that's real easy to do with Vagrant and Oracle VirtualBox (and this module).  Note, although I believe it's possible to get this to work on Windows I've never tried.  Take a look at the [Vagrant docs](http://docs.vagrantup.com/v1/docs/getting-started/index.html) for more info.
 
+0.1 - The module has been updated to support the inclusion of a local
+root CA to build the certificates against.  Drop the key and cert in the
+files/ subdirectory and specify them on the class resource.
+
 1. Download [VirtualBox](https://www.virtualbox.org/) and install
 2. Ensure Ruby and Rubygems are installed `gem --version` (if not install)
 3. Install the [Vagrant](http://www.vagrantup.com) gem `gem install vagrant`
@@ -29,7 +33,9 @@ If you want to get a basic Ozone server running in a virtual machine, well that'
     		puppet.manifest_file  = "mybox.pp"
     		puppet.module_path = "modules"
     		#puppet.options = "--verbose --debug"
-  		end
+  	end
+    config.vm.network "private_network", ip: "192.168.10.20"
+
  7. Create the manifests and modules dirs: `mkdir manifests modules`
  8. Create the mybox.pp file in the manifests dir and fill 'er with:
  
@@ -41,8 +47,12 @@ If you want to get a basic Ozone server running in a virtual machine, well that'
   			path => "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
 		}
 
-		class { "ozone::ozone": }
-		
+	  class { "ozone::ozone": 
+      ozone_https_port => "8443",
+      ozone_hostname => "ozone",
+      ozone_ca_cert => "henson.pem",
+      ozone_ca_key => "henson.key"
+    }	
 9. Git clone this module into the modules dir: `cd modules; git clone https://bitbucket.org/codice/puppet-ozone.git ozone`
 10. Now, you start the machine: `v up` from the MyBox directory
 
@@ -50,6 +60,10 @@ NOTE: Depending on resources available it may take a while.  For example, I've a
 
 
 When it's all said and done you should be able to see the running Ozone at [https://localhost:8443/owf](https://localhost:8443/owf) and login with testAdmin1:password.
+
+If you have specified the root CA to the Puppet provisioning process,
+you'll need to add the hostname to your local hosts file, pointing to
+the appropriate IP address.
 
 # Todo
 

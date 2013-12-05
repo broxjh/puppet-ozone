@@ -12,7 +12,7 @@
 DEFAULT_USER_PASSWORD="password"
 DEFAULT_KEYSTORE_PASSWORD="changeit"
 DEFAULT_COUNTRY_CODE="US"
-DEFAULT_HOSTNAME=<%= ozone_hostname %>
+DEFAULT_HOSTNAME=<%= @ozone_hostname %>
 
 # createSelfSigningCertAuthority cakeyname cacertname hostname
 #
@@ -27,37 +27,36 @@ DEFAULT_HOSTNAME=<%= ozone_hostname %>
 function createSelfSigningCertAuthority
 {
     #set local variables
-	local l_cakeyname=${1}
-	local l_cacertname=${2}
-	local l_hostname=${3}
+  	local l_cakeyname=${1}
+  	local l_cacertname=${2}
+  	local l_hostname=${3}
    
     # generate the user's config file	
     local l_configFile=${l_hostname}.config
-	echo "dir=." >> ${l_configFile}
-	echo "[ req ]" >> ${l_configFile}
-	echo "output_password=pass:${DEFAULT_KEYSTORE_PASSWORD}" >> ${l_configFile}
-	echo "distinguished_name = req_distinguished_name" >> ${l_configFile}
-	echo "prompt=no" >> ${l_configFile}
-	echo "[ req_distinguished_name ]"  >> ${l_configFile}
-	echo "organizationName=${l_hostname}" >> ${l_configFile}
-	echo "organizationalUnitName=${l_hostname}" >> ${l_configFile}
-	echo "emailAddress=${l_hostname}" >> ${l_configFile}
-	echo "localityName=${l_hostname}" >> ${l_configFile}
-	echo "stateOrProvinceName=${l_hostname}" >> ${l_configFile}
-	echo "commonName=${l_hostname}" >> ${l_configFile}
-	echo "countryName=${DEFAULT_COUNTRY_CODE}" >> ${l_configFile}
-
-	# generate certificate authority's keystore
-	openssl genrsa -des3 -out ${l_cakeyname} -passout pass:${DEFAULT_KEYSTORE_PASSWORD} 4096 
+  	echo "dir=." >> ${l_configFile}
+  	echo "[ req ]" >> ${l_configFile}
+  	echo "output_password=pass:${DEFAULT_KEYSTORE_PASSWORD}" >> ${l_configFile}
+  	echo "distinguished_name = req_distinguished_name" >> ${l_configFile}
+  	echo "prompt=no" >> ${l_configFile}
+  	echo "[ req_distinguished_name ]"  >> ${l_configFile}
+  	echo "organizationName=${l_hostname}" >> ${l_configFile}
+  	echo "organizationalUnitName=${l_hostname}" >> ${l_configFile}
+  	echo "emailAddress=${l_hostname}" >> ${l_configFile}
+  	echo "localityName=${l_hostname}" >> ${l_configFile}
+  	echo "stateOrProvinceName=${l_hostname}" >> ${l_configFile}
+  	echo "commonName=${l_hostname}" >> ${l_configFile}
+  	echo "countryName=${DEFAULT_COUNTRY_CODE}" >> ${l_configFile}
+    
+  	# generate certificate authority's keystore
+  	openssl genrsa -des3 -out ${l_cakeyname} -passout pass:${DEFAULT_KEYSTORE_PASSWORD} 4096 
 	
-	# generate certificate authority's cert request
-	openssl req -new -x509 -days 365 -key ${l_cakeyname} -passin pass:${DEFAULT_KEYSTORE_PASSWORD} -out ${l_cacertname} -config ${l_configFile}
+  	# generate certificate authority's cert request
+  	openssl req -new -x509 -days 365 -key ${l_cakeyname} -passin pass:${DEFAULT_KEYSTORE_PASSWORD} -out ${l_cacertname} -config ${l_configFile}
+  	# remove the config file--we don't need it anymore.
+  	rm ${l_configFile}
+
+  	echo -e "Created ${l_cakeyname} and ${l_cacertname} in `pwd` \n"
 	
-
-	# remove the config file--we don't need it anymore.
-	rm ${l_configFile}
-
-	echo -e "Created ${l_cakeyname} and ${l_cacertname} in `pwd` \n"
 
 }
 
@@ -125,10 +124,13 @@ function createUserCertificate
 	local l_cakeyname="${1}"
 	local l_cacertname="${2}"
 
-	echo -e "\nEnter the username of the person you want to generate a certificate for:"
-	read l_username
-	echo ""
-
+	#echo -e "\nEnter the username of the person you want to generate a certificate for:"
+	#read l_username
+	#echo ""
+  
+  # Since we're running from Puppet here - no user input
+  local l_username="${3}"
+  
 	local l_userkeyfile=${l_username}.key
 	local l_usercsrfile=${l_username}.csr
 	local l_crtfile=${l_username}.crt
@@ -170,17 +172,25 @@ function createUserCertificate
 	echo -e "\n*******************************************************\n"
 }
 
-
-cakeyname=${DEFAULT_HOSTNAME}-ca.key
-cacertname=${DEFAULT_HOSTNAME}-ca.crt
 hostkeystorename=${DEFAULT_HOSTNAME}.jks
-		
+
+# Provided CA Cert or not?
+<% if @ozone_ca_cert == "" %>		
+  cacertname=${DEFAULT_HOSTNAME}-ca.crt
+  cakeyname=${DEFAULT_HOSTNAME}-ca.key
+  
 # call function that creates the certificate authority files
 # createSelfSigningCertAuthority cakeyname cacertname hostname
-createSelfSigningCertAuthority "${cakeyname}" "${cacertname}" "${DEFAULT_HOSTNAME}"
-
+  createSelfSigningCertAuthority "${cakeyname}" "${cacertname}" "${DEFAULT_HOSTNAME}"
+<% else %>
+# Use the provided CA.
+  cacertname=<%= @ozone_home %>/certs/<%= @ozone_ca_cert %>
+  cakeyname=<%= @ozone_home %>/certs/<%= @ozone_ca_key %>
+<% end %>
 # this function creates the server certificate files
 # createServerCertificate cakeyname cacertname hostname hostkeystorename
 createServerCertificate "${cakeyname}" "${cacertname}" "${DEFAULT_HOSTNAME}" "${hostkeystorename}"
+createUserCertificate "${cakeyname}" "${cacertname}" "testAdmin1"
 
-cp ${hostkeystorename} <%= ozone_home %>/tomcat/certs/
+cp testAdmin1.p12 <%= @ozone_home %>/tomcat/certs/
+cp ${hostkeystorename} <%= @ozone_home %>/tomcat/certs/
