@@ -18,7 +18,7 @@ class ozone::ozone ( $user = 'ozone',
     exec { "get_ozone":
       cwd     => $ozone_home,
       command => "wget https://s3.amazonaws.com/org.ozoneplatform/OWF/7-GA/OWF-bundle-7-GA.zip -O owf-7-GA.zip",
-      creates => "${ozone_home}/OWF-bundle-7-GA.zip",
+      creates => "${ozone_home}/owf-7-GA.zip",
       timeout => 3000,
     }
   } elsif $ozone_version == '3.8.1' {
