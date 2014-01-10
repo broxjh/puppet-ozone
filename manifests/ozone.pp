@@ -1,16 +1,33 @@
 # Specifically targetting CentOS 5.8 with this class.
 
-class ozone::ozone ( $user = "ozone", 
-  $ozone_home = "/opt/ozone", 
+class ozone::ozone ( $user = 'ozone', 
+  $ozone_home = '/opt/ozone', 
   $ozone_https_port = 443, 
   $ozone_http_port = 80,
-  $ozone_hostname = "localhost",
-  $ozone_ca_cert = "",
-  $ozone_ca_key = ""
+  $ozone_hostname = 'localhost',
+  $ozone_ca_cert = '',
+  $ozone_ca_key = '',
+  $ozone_version = '7-GA'
 ) {
 
-  if !defined(Service["iptables"]) {
+  if !defined(Service['iptables']) {
     service { "iptables": ensure => false, enable => false }
+  }
+  
+  if $ozone_version == '7-GA' {
+    exec { "get_ozone":
+      cwd     => $ozone_home,
+      command => "wget https://s3.amazonaws.com/org.ozoneplatform/OWF/7-GA/OWF-bundle-7-GA.zip -O owf-7-GA.zip",
+      creates => "${ozone_home}/OWF-bundle-7-GA.zip",
+      timeout => 3000,
+    }
+  } elsif $ozone_version == '3.8.1' {
+    exec { "get_ozone":
+      cwd     => $ozone_home,
+      command => "wget https://nexus.di2e.net/nexus/service/local/repositories/releases/content/org/owfgoss/owf/${ozone_version}/owf-${ozone_version}.zip",
+      creates => "${ozone_home}/owf-${ozone_version}.zip",
+      timeout => 3000,
+    }
   }
 
   user { $user:
@@ -70,29 +87,24 @@ class ozone::ozone ( $user = "ozone",
   # Need Ant from source here
   exec { "get_ant": 
     cwd     => '/usr/local',
-    command => 'wget http://download.nextag.com/apache//ant/binaries/apache-ant-1.9.2-bin.zip',
-    creates => '/usr/local/apache-ant-1.9.2-bin.zip',
+    command => 'wget http://mirrors.ibiblio.org/apache//ant/binaries/apache-ant-1.9.3-bin.zip',
+    creates => '/usr/local/apache-ant-1.9.3-bin.zip',
   } ->
   exec { "unzip_ant":
     cwd     => '/usr/local',
-    command => 'unzip apache-ant-1.9.2-bin.zip',
-    creates => '/usr/local/apache-ant-1.9.2'
+    command => 'unzip apache-ant-1.9.3-bin.zip',
+    creates => '/usr/local/apache-ant-1.9.3'
   } -> 
   file { "/usr/local/bin/ant":
     ensure => link,
-    target => '/usr/local/apache-ant-1.9.2/bin/ant'
-  } ->
-  exec { "get_ozone":
-    cwd     => $ozone_home,
-    command => "wget https://s3.amazonaws.com/org.ozoneplatform/OWF/7-GA/OWF-bundle-7-GA.zip",
-    creates => "${ozone_home}/OWF-bundle-7-GA.zip",
-    timeout => 3000,
+    target => '/usr/local/apache-ant-1.9.3/bin/ant'
   } -> 
   exec { "unzip_ozone":
     user    => $user,
     cwd     => $ozone_home,
-    command => "unzip OWF-bundle-7-GA.zip",
+    command => "unzip owf-${ozone_version}.zip",
     creates => "${ozone_home}/apache-tomcat-7.0.21",
+    require => Exec['get_ozone']
   } ->
   file { "${ozone_home}/tomcat":
     ensure  => "link",
