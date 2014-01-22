@@ -10,6 +10,9 @@ class ozone::ozone ( $user = 'ozone',
   $ozone_version = '7-GA'
 ) {
 
+  # Remote location to 3.8.1 bundle
+  $ver_381 = ""
+  
   if !defined(Service['iptables']) {
     service { "iptables": ensure => false, enable => false }
   }
@@ -24,7 +27,7 @@ class ozone::ozone ( $user = 'ozone',
   } elsif $ozone_version == '3.8.1' {
     exec { "get_ozone":
       cwd     => $ozone_home,
-      command => "wget https://nexus.di2e.net/nexus/service/local/repositories/releases/content/org/owfgoss/owf/${ozone_version}/owf-${ozone_version}.zip",
+      command => "wget ${ver_381},
       creates => "${ozone_home}/owf-${ozone_version}.zip",
       timeout => 3000,
     }
