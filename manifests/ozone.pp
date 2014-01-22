@@ -1,4 +1,4 @@
-# Specifically targetting CentOS 5.8 with this class.
+# Specifically targetting CentOS with this class.
 
 class ozone::ozone ( $user = 'ozone', 
   $ozone_home = '/opt/ozone', 
@@ -7,30 +7,19 @@ class ozone::ozone ( $user = 'ozone',
   $ozone_hostname = 'localhost',
   $ozone_ca_cert = '',
   $ozone_ca_key = '',
-  $ozone_version = '7-GA'
+  $ozone_version = '7-GA',
+  $ozone_remote = 'https://s3.amazonaws.com/org.ozoneplatform/OWF/7-GA/OWF-bundle-7-GA.zip'
 ) {
-
-  # Remote location to 3.8.1 bundle
-  $ver_381 = ""
   
   if !defined(Service['iptables']) {
     service { "iptables": ensure => false, enable => false }
   }
   
-  if $ozone_version == '7-GA' {
-    exec { "get_ozone":
-      cwd     => $ozone_home,
-      command => "wget https://s3.amazonaws.com/org.ozoneplatform/OWF/7-GA/OWF-bundle-7-GA.zip -O owf-7-GA.zip",
-      creates => "${ozone_home}/owf-7-GA.zip",
-      timeout => 3000,
-    }
-  } elsif $ozone_version == '3.8.1' {
-    exec { "get_ozone":
-      cwd     => $ozone_home,
-      command => "wget ${ver_381},
-      creates => "${ozone_home}/owf-${ozone_version}.zip",
-      timeout => 3000,
-    }
+  exec { "get_ozone":
+    cwd     => $ozone_home,
+    command => "wget ${ozone_remote} -O owf-${ozone_version}.zip",
+    creates => "${ozone_home}/owf-${ozone_version}.zip",
+    timeout => 3000,
   }
 
   user { $user:
